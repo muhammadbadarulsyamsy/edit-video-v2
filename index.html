@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎬 Video Editor - Otomatis dari Teks</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5.0.0/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.0/index.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --bg: #0b0f19;
+    --panel: #111827;
+    --panel-2: #1f2937;
+    --accent: #6366f1;
+    --accent-2: #8b5cf6;
+    --ok: #10b981;
+    --warn: #f59e0b;
+    --err: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, #1e1b4b33, transparent),
+                radial-gradient(900px 500px at 100% 0%, #4c1d9533, transparent),
+                var(--bg);
+    color: #e5e7eb;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .glass {
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .7rem 1.1rem; border-radius: .7rem; font-weight: 600;
+    transition: transform .15s ease, box-shadow .2s ease, background .2s;
+    cursor: pointer; border: 1px solid transparent;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    box-shadow: 0 8px 24px -8px #6366f188;
+  }
+  .btn-primary:hover { box-shadow: 0 12px 28px -8px #6366f1aa; }
+  .btn-secondary { background: var(--panel-2); color: #e5e7eb; border-color: rgba(255,255,255,.08); }
+  .btn-ghost { background: transparent; color: #cbd5e1; }
+  .btn-ghost:hover { background: rgba(255,255,255,0.05); }
+  .btn-danger { background: #7f1d1d; color: #fecaca; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  .field { display: flex; flex-direction: column; gap: .4rem; }
+  .field label { font-size: .85rem; color: #cbd5e1; font-weight: 500; }
+  .field .hint { font-size: .75rem; color: #94a3b8; }
+  .input, .textarea, .select {
+    width: 100%; padding: .7rem .9rem; border-radius: .6rem;
+    background: #0f172a; color: #e5e7eb;
+    border: 1px solid rgba(255,255,255,0.08);
+    font-family: inherit; font-size: .95rem;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .input:focus, .textarea:focus, .select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px #6366f133;
+  }
+  .textarea { resize: vertical; min-height: 120px; font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .35rem .7rem; border-radius: 999px;
+    background: rgba(99,102,241,.15); color: #a5b4fc;
+    font-size: .8rem; font-weight: 500;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+
+  .stepper {
+    display: flex; gap: .5rem; align-items: center;
+  }
+  .step-dot {
+    width: 32px; height: 32px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .85rem;
+    background: #1f2937; color: #64748b;
+    border: 2px solid transparent;
+    transition: all .25s;
+  }
+  .step-dot.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    box-shadow: 0 0 0 4px rgba(99,102,241,.15);
+  }
+  .step-dot.done { background: var(--ok); color: white; }
+  .step-line { flex: 1; height: 2px; background: #374151; }
+  .step-line.done { background: var(--ok); }
+
+  .scene-item {
+    background: #0f172a;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: .8rem;
+    padding: 1rem;
+    margin-bottom: .75rem;
+    transition: border-color .2s;
+  }
+  .scene-item:hover { border-color: rgba(99,102,241,.3); }
+  .scene-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: .75rem;
+  }
+  .scene-num {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white; padding: .25rem .65rem; border-radius: .5rem;
+    font-weight: 700; font-size: .8rem;
+  }
+
+  .drop-zone {
+    border: 2px dashed rgba(255,255,255,0.15);
+    border-radius: .8rem; padding: 2rem 1rem;
+    text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .drop-zone:hover, .drop-zone.drag {
+    border-color: var(--accent); background: rgba(99,102,241,.05);
+  }
+  .drop-zone.has-file { border-color: var(--ok); background: rgba(16,185,129,.08); }
+
+  .log-box {
+    background: #030712;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: .6rem;
+    padding: .8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .78rem;
+    max-height: 340px; overflow-y: auto;
+    color: #a7f3d0;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .log-box::-webkit-scrollbar { width: 8px; }
+  .log-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+  .progress-bar {
+    height: 8px; background: #1f2937; border-radius: 999px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width .4s ease;
+  }
+
+  .tab {
+    padding: .6rem 1rem; border-radius: .6rem; cursor: pointer;
+    font-weight: 500; color: #94a3b8; transition: all .2s;
+  }
+  .tab:hover { color: #e5e7eb; background: rgba(255,255,255,.04); }
+  .tab.active {
+    background: rgba(99,102,241,.15); color: #a5b4fc;
+  }
+
+  .hero-grad {
+    background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(139,92,246,.08));
+  }
+
+  .kbd {
+    background: #1f2937; border: 1px solid rgba(255,255,255,.1);
+    border-bottom-width: 2px; border-radius: .3rem;
+    padding: .1rem .4rem; font-size: .75rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  details.faq {
+    background: #0f172a; border-radius: .6rem;
+    padding: .75rem 1rem; border: 1px solid rgba(255,255,255,.05);
+  }
+  details.faq[open] { border-color: rgba(99,102,241,.3); }
+  details.faq summary { cursor: pointer; font-weight: 600; color: #cbd5e1; }
+  details.faq p { color: #94a3b8; margin-top: .5rem; font-size: .9rem; }
+
+  .float-btn {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    z-index: 50;
+  }
+
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(99,102,241,.5); }
+    70% { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+    100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+  }
+  .pulse { animation: pulse-ring 1.8s infinite; }
+
+  .toast {
+    position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100;
+    background: var(--panel); border: 1px solid rgba(255,255,255,.08);
+    border-radius: .6rem; padding: .8rem 1rem;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,.5);
+    opacity: 0; transform: translateY(-10px);
+    transition: all .3s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 640px) {
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- HEADER -->
+<header class="glass sticky top-0 z-40">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+           style="background: linear-gradient(135deg,#6366f1,#8b5cf6);">
+        <span class="text-xl">🎬</span>
+      </div>
+      <div>
+        <div class="font-bold text-lg leading-tight">Video Editor</div>
+        <div class="text-xs text-slate-400">Otomatis dari Naskah Teks</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="chip hide-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse"></span>
+        Server Aktif
+      </span>
+      <button class="btn btn-ghost" onclick="showHelp()">❓ Bantuan</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-8">
+
+  <!-- HERO -->
+  <section class="hero-grad rounded-2xl p-6 md:p-10 mb-8 border border-indigo-500/20">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div>
+        <div class="chip mb-3">✨ Untuk Pemula & Profesional</div>
+        <h1 class="text-3xl md:text-4xl font-extrabold mb-2 leading-tight">
+          Ubah Naskah Jadi Video<br/>
+          <span class="bg-clip-text text-transparent" style="background-image: linear-gradient(135deg,#a5b4fc,#f0abfc);">
+            Tanpa Ribet
+          </span>
+        </h1>
+        <p class="text-slate-300 max-w-xl">
+          Cukup isi form di bawah: unggah video, tulis narasi per scene,
+          lalu klik <b>Render</b>. Sistem akan memotong, memberi subtitle,
+          dan menambahkan efek secara otomatis.
+        </p>
+      </div>
+      <div class="grid grid-cols-3 gap-3 text-center hide-sm">
+        <div class="card py-3">
+          <div class="text-2xl">📝</div>
+          <div class="text-xs text-slate-400 mt-1">Tulis Naskah</div>
+        </div>
+        <div class="card py-3">
+          <div class="text-2xl">🎥</div>
+          <div class="text-xs text-slate-400 mt-1">Unggah Video</div>
+        </div>
+        <div class="card py-3">
+          <div class="text-2xl">⚡</div>
+          <div class="text-xs text-slate-400 mt-1">Render Otomatis</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEPPER -->
+  <div class="stepper mb-6">
+    <div id="dot-1" class="step-dot active">1</div>
+    <div id="line-1" class="step-line"></div>
+    <div id="dot-2" class="step-dot">2</div>
+    <div id="line-2" class="step-line"></div>
+    <div id="dot-3" class="step-dot">3</div>
+    <div id="line-3" class="step-line"></div>
+    <div id="dot-4" class="step-dot">4</div>
+  </div>
+
+  <!-- STEP 1: Info Proyek -->
+  <section id="step-1" class="card mb-4">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#6366f133;color:#a5b4fc;">📋</div>
+      <div>
+        <h2 class="text-xl font-bold">Langkah 1 — Info Proyek</h2>
+        <p class="text-sm text-slate-400">Beri nama dan pilih gaya video Anda</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="field">
+        <label>Nama Proyek</label>
+        <input id="title" class="input" placeholder="Contoh: Video Produk Kopi" value="Proyek Saya" />
+        <span class="hint">Nama ini akan menjadi nama file hasil akhir.</span>
+      </div>
+
+      <div class="field">
+        <label>Gaya Editing</label>
+        <select id="style" class="select">
+          <option value="normal">Normal — tanpa efek khusus</option>
+          <option value="cinematic" selected>Cinematic — potongan cepat, zoom halus, film grain</option>
+          <option value="dynamic">Dynamic — zoom dinamis, kontras tinggi</option>
+          <option value="calm">Calm — potongan lambat, warna hangat</option>
+          <option value="podcast">Podcast — potongan stabil, warna natural</option>
+        </select>
+        <span class="hint">Pilih sesuai nuansa video yang Anda inginkan.</span>
+      </div>
+
+      <div class="field md:col-span-2">
+        <label>Mode Audio</label>
+        <div class="grid md:grid-cols-3 gap-3">
+          <label class="cursor-pointer">
+            <input type="radio" name="audio_mode" value="vo_only" class="hidden peer" checked>
+            <div class="card peer-checked:border-indigo-500 peer-checked:bg-indigo-500/10 text-center">
+              <div class="text-2xl mb-1">🎙️</div>
+              <div class="font-semibold">Hanya Voice Over</div>
+              <div class="text-xs text-slate-400 mt-1">Audio asli dimatikan</div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="audio_mode" value="mix_bgm" class="hidden peer">
+            <div class="card peer-checked:border-indigo-500 peer-checked:bg-indigo-500/10 text-center">
+              <div class="text-2xl mb-1">🎵</div>
+              <div class="font-semibold">VO + Musik Latar</div>
+              <div class="text-xs text-slate-400 mt-1">Tambah BGM 30%</div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="audio_mode" value="keep_original" class="hidden peer">
+            <div class="card peer-checked:border-indigo-500 peer-checked:bg-indigo-500/10 text-center">
+              <div class="text-2xl mb-1">🔊</div>
+              <div class="font-semibold">Audio Asli</div>
+              <div class="text-xs text-slate-400 mt-1">Pertahankan suara video</div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end mt-5">
+      <button class="btn btn-primary" onclick="goStep(2)">Lanjut ke Scene →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: Scene Builder -->
+  <section id="step-2" class="card mb-4 hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#6366f133;color:#a5b4fc;">🎞️</div>
+      <div>
+        <h2 class="text-xl font-bold">Langkah 2 — Susun Scene</h2>
+        <p class="text-sm text-slate-400">Tambahkan scene sesuai potongan video Anda</p>
+      </div>
+    </div>
+
+    <div class="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4 mb-4 text-sm">
+      <div class="font-semibold text-indigo-300 mb-1">💡 Tips untuk pemula:</div>
+      <ul class="text-slate-300 space-y-1 list-disc list-inside">
+        <li>Setiap <b>scene</b> adalah satu potongan video yang ingin Anda tampilkan.</li>
+        <li><b>Waktu Mulai</b> dan <b>Waktu Selesai</b> dihitung dalam detik dari awal video.</li>
+        <li><b>Narasi</b> akan dibacakan otomatis (text-to-speech) dan dijadikan subtitle.</li>
+      </ul>
+    </div>
+
+    <div id="scenes-list"></div>
+
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button class="btn btn-secondary" onclick="addScene()">➕ Tambah Scene</button>
+      <button class="btn btn-ghost" onclick="addSampleScenes()">🎲 Isi Contoh</button>
+      <button class="btn btn-ghost" onclick="clearScenes()">🗑️ Kosongkan</button>
+      <div class="ml-auto flex gap-2">
+        <button class="btn btn-ghost" onclick="goStep(1)">← Kembali</button>
+        <button class="btn btn-primary" onclick="goStep(3)">Lanjut ke Upload →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: Upload File -->
+  <section id="step-3" class="card mb-4 hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#6366f133;color:#a5b4fc;">📁</div>
+      <div>
+        <h2 class="text-xl font-bold">Langkah 3 — Unggah File</h2>
+        <p class="text-sm text-slate-400">Video sumber wajib, file lainnya opsional</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="font-semibold mb-2 block">
+          🎥 Video Sumber <span class="text-rose-400">*</span>
+        </label>
+        <div id="dz-source" class="drop-zone" onclick="document.getElementById('file-source').click()">
+          <div class="text-4xl mb-2">🎥</div>
+          <div class="font-semibold" id="dz-source-label">Klik atau seret video ke sini</div>
+          <div class="text-xs text-slate-400 mt-1">MP4, MOV, MKV — maks 2 GB</div>
+          <input id="file-source" type="file" accept="video/*" class="hidden" onchange="onFilePick('source', this)" />
+        </div>
+      </div>
+
+      <div>
+        <label class="font-semibold mb-2 block">🎵 Musik Latar (BGM) — opsional</label>
+        <div id="dz-bgm" class="drop-zone" onclick="document.getElementById('file-bgm').click()">
+          <div class="text-4xl mb-2">🎵</div>
+          <div class="font-semibold" id="dz-bgm-label">Klik atau seret musik ke sini</div>
+          <div class="text-xs text-slate-400 mt-1">MP3, WAV, OGG</div>
+          <input id="file-bgm" type="file" accept="audio/*" class="hidden" onchange="onFilePick('bgm', this)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between mt-5">
+      <button class="btn btn-ghost" onclick="goStep(2)">← Kembali</button>
+      <button class="btn btn-primary" onclick="goStep(4)">Lanjut ke Review →</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: Review & Render -->
+  <section id="step-4" class="card mb-4 hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:#6366f133;color:#a5b4fc;">🚀</div>
+      <div>
+        <h2 class="text-xl font-bold">Langkah 4 — Review & Render</h2>
+        <p class="text-sm text-slate-400">Periksa naskah akhir, lalu mulai render</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-3 border-b border-white/5 pb-2">
+      <div class="tab active" data-tab="preview" onclick="switchTab('preview')">👁️ Preview Naskah</div>
+      <div class="tab" data-tab="edit" onclick="switchTab('edit')">✏️ Edit Manual</div>
+      <div class="tab" data-tab="log" onclick="switchTab('log')">📋 Log Render</div>
+    </div>
+
+    <!-- Preview -->
+    <div id="tab-preview">
+      <div class="bg-slate-900/60 rounded-lg p-4 mb-3">
+        <div class="grid md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <div class="text-slate-400 text-xs">Proyek</div>
+            <div id="sum-title" class="font-semibold">—</div>
+          </div>
+          <div>
+            <div class="text-slate-400 text-xs">Gaya</div>
+            <div id="sum-style" class="font-semibold">—</div>
+          </div>
+          <div>
+            <div class="text-slate-400 text-xs">Audio</div>
+            <div id="sum-audio" class="font-semibold">—</div>
+          </div>
+          <div>
+            <div class="text-slate-400 text-xs">Jumlah Scene</div>
+            <div id="sum-scenes" class="font-semibold">—</div>
+          </div>
+          <div>
+            <div class="text-slate-400 text-xs">Video Sumber</div>
+            <div id="sum-source" class="font-semibold truncate">—</div>
+          </div>
+          <div>
+            <div class="text-slate-400 text-xs">BGM</div>
+            <div id="sum-bgm" class="font-semibold truncate">—</div>
+          </div>
+        </div>
+      </div>
+      <pre id="script-preview" class="textarea" style="min-height:220px;background:#030712;color:#fde68a;"></pre>
+    </div>
+
+    <!-- Edit Manual -->
+    <div id="tab-edit" class="hidden">
+      <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-3 text-sm">
+        <b class="text-amber-300">⚠️ Perhatian:</b> Jika Anda mengedit naskah secara manual di sini,
+        perubahan pada form sebelumnya akan diabaikan. Gunakan hanya jika Anda paham format naskah.
+      </div>
+      <textarea id="script-edit" class="textarea" style="min-height:280px;"></textarea>
+    </div>
+
+    <!-- Log -->
+    <div id="tab-log" class="hidden">
+      <div id="render-status" class="mb-3">
+        <div class="text-sm text-slate-400 mb-2">Belum ada proses render.</div>
+      </div>
+      <div class="progress-bar mb-3"><div id="progress-fill" class="progress-fill" style="width:0%"></div></div>
+      <div id="log-box" class="log-box">Menunggu render dimulai...</div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 justify-between mt-5">
+      <button class="btn btn-ghost" onclick="goStep(3)">← Kembali</button>
+      <div class="flex gap-2">
+        <button id="btn-render" class="btn btn-primary pulse" onclick="startRender()">
+          🎬 Mulai Render
+        </button>
+        <button id="btn-download" class="btn btn-secondary hidden" onclick="downloadResult()">
+          ⬇️ Download Video
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="card">
+    <h2 class="text-xl font-bold mb-3">❓ Pertanyaan Umum</h2>
+    <div class="space-y-2">
+      <details class="faq">
+        <summary>Berapa lama proses render?</summary>
+        <p>Tergantung durasi video dan jumlah scene. Untuk video 5 menit biasanya 1-3 menit.</p>
+      </details>
+      <details class="faq">
+        <summary>Format video apa saja yang didukung?</summary>
+        <p>MP4, MOV, MKV, AVI. Resolusi output otomatis mengikuti video sumber (tidak dipaksa 16:9).</p>
+      </details>
+      <details class="faq">
+        <summary>Apakah saya perlu paham format naskah?</summary>
+        <p>Tidak! Gunakan form wizard di atas. Sistem akan menyusun format naskah secara otomatis.</p>
+      </details>
+      <details class="faq">
+        <summary>Bagaimana cara menambahkan efek khusus?</summary>
+        <p>Pilih "Gaya Editing" di Langkah 1. Untuk efek lebih spesifik, gunakan tab "Edit Manual" di Langkah 4.</p>
+      </details>
+    </div>
+  </section>
+
+  <footer class="text-center text-slate-500 text-xs mt-8 pb-8">
+    Video Editor · Otomatis dari Naskah · Dibuat dengan ❤️
+  </footer>
+</main>
+
+<!-- Modal Bantuan -->
+<div id="help-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this)closeHelp()">
+  <div class="glass rounded-2xl max-w-lg w-full p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-xl font-bold">📘 Panduan Singkat</h3>
+      <button class="btn btn-ghost" onclick="closeHelp()">✕</button>
+    </div>
+    <div class="space-y-3 text-sm text-slate-300">
+      <div><b class="text-indigo-300">1. Info Proyek:</b> Beri nama dan pilih gaya editing.</div>
+      <div><b class="text-indigo-300">2. Susun Scene:</b> Tambahkan scene dengan waktu mulai/selesai dan narasi.</div>
+      <div><b class="text-indigo-300">3. Unggah File:</b> Video sumber wajib, BGM opsional.</div>
+      <div><b class="text-indigo-300">4. Review & Render:</b> Periksa naskah akhir, lalu klik render.</div>
+      <hr class="border-white/10 my-3">
+      <div class="text-xs text-slate-400">
+        Shortcut: <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> untuk render cepat.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== State =====
+  const state = {
+    step: 1,
+    scenes: [],
+    files: { source: null, bgm: null },
+    scriptText: "",
+    currentJobId: null,
+    pollTimer: null,
+  };
+
+  // ===== Toast =====
+  function toast(msg, type = "info") {
+    const t = document.getElementById("toast");
+    const colors = { info: "#6366f1", ok: "#10b981", err: "#ef4444", warn: "#f59e0b" };
+    t.style.borderLeft = `4px solid ${colors[type] || colors.info}`;
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._to);
+    t._to = setTimeout(() => t.classList.remove("show"), 3500);
+  }
+
+  // ===== Stepper =====
+  function goStep(n) {
+    if (n === 3 && state.scenes.length === 0) {
+      toast("Tambahkan minimal 1 scene terlebih dahulu.", "warn");
+      return;
+    }
+    if (n === 4) {
+      if (!state.files.source) {
+        toast("Unggah video sumber terlebih dahulu.", "warn");
+        goStep(3);
+        return;
+      }
+      buildScript();
+      updateSummary();
+    }
+
+    state.step = n;
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById(`step-${i}`).classList.toggle("hidden", i !== n);
+      const dot = document.getElementById(`dot-${i}`);
+      dot.classList.remove("active", "done");
+      if (i < n) dot.classList.add("done");
+      if (i === n) dot.classList.add("active");
+      if (i < 4) {
+        const line = document.getElementById(`line-${i}`);
+        line.classList.toggle("done", i < n);
+      }
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ===== Scenes =====
+  function addScene(data = {}) {
+    state.scenes.push({
+      start: data.start ?? 0,
+      end: data.end ?? 10,
+      narration: data.narration ?? "",
+      subtitle: data.subtitle ?? "",
+      cutaway: data.cutaway ?? "",
+    });
+    renderScenes();
+  }
+
+  function removeScene(i) {
+    state.scenes.splice(i, 1);
+    renderScenes();
+  }
+
+  function updateScene(i, key, value) {
+    state.scenes[i][key] = value;
+  }
+
+  function clearScenes() {
+    if (!confirm("Hapus semua scene?")) return;
+    state.scenes = [];
+    renderScenes();
+  }
+
+  function addSampleScenes() {
+    state.scenes = [
+      { start: 0, end: 8, narration: "Selamat datang di video kami. Hari ini kita akan membahas topik menarik.", subtitle: "", cutaway: "" },
+      { start: 8, end: 20, narration: "Pertama, mari kita lihat gambaran umum dari apa yang akan kita pelajari.", subtitle: "", cutaway: "" },
+      { start: 20, end: 35, narration: "Ini adalah bagian inti dari pembahasan kita hari ini.", subtitle: "", cutaway: "" },
+      { start: 35, end: 50, narration: "Terima kasih sudah menonton sampai akhir. Jangan lupa subscribe!", subtitle: "", cutaway: "" },
+    ];
+    renderScenes();
+    toast("Contoh scene berhasil ditambahkan.", "ok");
+  }
+
+  function renderScenes() {
+    const list = document.getElementById("scenes-list");
+    if (state.scenes.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-10 text-slate-400">
+          <div class="text-5xl mb-2">🎞️</div>
+          <div>Belum ada scene. Klik "Tambah Scene" atau "Isi Contoh" untuk memulai.</div>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = state.scenes.map((s, i) => `
+      <div class="scene-item">
+        <div class="scene-header">
+          <div class="flex items-center gap-3">
+            <span class="scene-num">SCENE ${i + 1}</span>
+            <span class="text-sm text-slate-400 mono">
+              ${formatTime(s.start)} – ${formatTime(s.end)}
+              <span class="text-slate-500">(${(s.end - s.start).toFixed(1)}s)</span>
+            </span>
+          </div>
+          <button class="btn btn-ghost" onclick="removeScene(${i})" title="Hapus scene">🗑️</button>
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <div class="field">
+            <label>⏱️ Waktu Mulai (detik)</label>
+            <input type="number" min="0" step="0.1" class="input" value="${s.start}"
+                   onchange="updateScene(${i},'start',parseFloat(this.value));renderScenes()" />
+          </div>
+          <div class="field">
+            <label>⏱️ Waktu Selesai (detik)</label>
+            <input type="number" min="0" step="0.1" class="input" value="${s.end}"
+                   onchange="updateScene(${i},'end',parseFloat(this.value));renderScenes()" />
+          </div>
+          <div class="field md:col-span-2">
+            <label>🎙️ Narasi (akan dibacakan & jadi subtitle)</label>
+            <textarea class="textarea" rows="2" placeholder="Tulis narasi scene ini..."
+                      oninput="updateScene(${i},'narration',this.value)">${s.narration}</textarea>
+          </div>
+          <div class="field">
+            <label>💬 Subtitle Khusus <span class="text-slate-500">(opsional)</span></label>
+            <input class="input" placeholder="Kosongkan = sama dengan narasi"
+                   value="${s.subtitle}" oninput="updateScene(${i},'subtitle',this.value)" />
+          </div>
+          <div class="field">
+            <label>🎬 Cutaway / Stock Footage <span class="text-slate-500">(opsional)</span></label>
+            <input class="input" placeholder="Contoh: footage-pantai.mp4"
+                   value="${s.cutaway}" oninput="updateScene(${i},'cutaway',this.value)" />
+          </div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function formatTime(sec) {
+    sec = Math.max(0, Number(sec) || 0);
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = (sec % 60).toFixed(1).padStart(4, "0");
+    return `${m}:${s}`;
+  }
+
+  // ===== File Handling =====
+  function onFilePick(key, input) {
+    if (input.files && input.files[0]) {
+      state.files[key] = input.files[0];
+      const dz = document.getElementById(`dz-${key}`);
+      dz.classList.add("has-file");
+      document.getElementById(`dz-${key}-label`).textContent = "✓ " + input.files[0].name;
+    }
+  }
+
+  ["source", "bgm"].forEach(key => {
+    const dz = document.getElementById(`dz-${key}`);
+    dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
+    dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+    dz.addEventListener("drop", e => {
+      e.preventDefault();
+      dz.classList.remove("drag");
+      const f = e.dataTransfer.files[0];
+      if (f) {
+        state.files[key] = f;
+        dz.classList.add("has-file");
+        document.getElementById(`dz-${key}-label`).textContent = "✓ " + f.name;
+        // sync input
+        const dt = new DataTransfer();
+        dt.items.add(f);
+        document.getElementById(`file-${key}`).files = dt.files;
+      }
+    });
+  });
+
+  // ===== Build Script =====
+  function buildScript() {
+    const audioMode = document.querySelector('input[name="audio_mode"]:checked')?.value || "vo_only";
+    const payload = {
+      title: document.getElementById("title").value || "Proyek Saya",
+      style: document.getElementById("style").value,
+      audio_mode: audioMode,
+      scenes: state.scenes,
+    };
+    // panggil API untuk konsisten dengan backend
+    fetch("/api/build-script", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json())
+      .then(data => {
+        state.scriptText = data.script;
+        document.getElementById("script-preview").textContent = data.script;
+        document.getElementById("script-edit").value = data.script;
+      })
+      .catch(err => toast("Gagal membangun naskah: " + err, "err"));
+  }
+
+  function updateSummary() {
+    document.getElementById("sum-title").textContent = document.getElementById("title").value || "—";
+    const styleMap = { normal: "Normal", cinematic: "Cinematic", dynamic: "Dynamic", calm: "Calm", podcast: "Podcast" };
+    document.getElementById("sum-style").textContent = styleMap[document.getElementById("style").value] || "—";
+    const audioMap = { vo_only: "Hanya Voice Over", mix_bgm: "VO + BGM", keep_original: "Audio Asli", mute_original: "Bisukan" };
+    const am = document.querySelector('input[name="audio_mode"]:checked')?.value;
+    document.getElementById("sum-audio").textContent = audioMap[am] || "—";
+    document.getElementById("sum-scenes").textContent = state.scenes.length + " scene";
+    document.getElementById("sum-source").textContent = state.files.source?.name || "—";
+    document.getElementById("sum-bgm").textContent = state.files.bgm?.name || "Tidak ada";
+  }
+
+  // ===== Tabs =====
+  function switchTab(name) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+    ["preview", "edit", "log"].forEach(n => {
+      document.getElementById(`tab-${n}`).classList.toggle("hidden", n !== name);
+    });
+  }
+
+  // ===== Render =====
+  async function startRender() {
+    if (!state.files.source) {
+      toast("Video sumber belum diunggah.", "err");
+      return;
+    }
+    if (state.scenes.length === 0 && !document.getElementById("script-edit").value.trim()) {
+      toast("Script kosong.", "err");
+      return;
+    }
+
+    const btn = document.getElementById("btn-render");
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Mengirim...";
+
+    // Gunakan script dari editor manual (jika diedit) atau generate dari form
+    const manualScript = document.getElementById("script-edit").value.trim();
+    const useManual = manualScript !== state.scriptText;
+
+    const fd = new FormData();
+    fd.append("source", state.files.source);
+    if (state.files.bgm) fd.append("bgm", state.files.bgm);
+    fd.append("title", document.getElementById("title").value || "Proyek Saya");
+
+    if (useManual) {
+      fd.append("script_text", manualScript);
+    } else {
+      const audioMode = document.querySelector('input[name="audio_mode"]:checked')?.value || "vo_only";
+      fd.append("form_json", JSON.stringify({
+        title: document.getElementById("title").value,
+        style: document.getElementById("style").value,
+        audio_mode: audioMode,
+        scenes: state.scenes,
+      }));
+    }
+
+    try {
+      const r = await fetch("/api/render", { method: "POST", body: fd });
+      const data = await r.json();
+      if (!r.ok) {
+        toast(data.error || "Gagal memulai render.", "err");
+        btn.disabled = false;
+        btn.innerHTML = "🎬 Mulai Render";
+        return;
+      }
+      state.currentJobId = data.job_id;
+      toast("Render dimulai! Pantau di tab Log.", "ok");
+      switchTab("log");
+      btn.innerHTML = "⏳ Sedang Render...";
+      startPolling();
+    } catch (e) {
+      toast("Error: " + e.message, "err");
+      btn.disabled = false;
+      btn.innerHTML = "🎬 Mulai Render";
+    }
+  }
+
+  function startPolling() {
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    state.pollTimer = setInterval(pollJob, 1500);
+    pollJob();
+  }
+
+  async function pollJob() {
+    if (!state.currentJobId) return;
+    try {
+      const r = await fetch(`/api/job/${state.currentJobId}`);
+      const j = await r.json();
+      const box = document.getElementById("log-box");
+      box.textContent = j.logs.join("\n") || "Menunggu...";
+      box.scrollTop = box.scrollHeight;
+      document.getElementById("progress-fill").style.width = (j.progress || 0) + "%";
+
+      const status = document.getElementById("render-status");
+      if (j.status === "running") {
+        status.innerHTML = `<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400 pulse"></span><b class="text-amber-300">Sedang Render...</b> <span class="text-slate-400 text-sm">${j.progress}%</span></div>`;
+      } else if (j.status === "done") {
+        status.innerHTML = `<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><b class="text-emerald-300">Selesai!</b></div>`;
+        document.getElementById("btn-render").classList.add("hidden");
+        const dlBtn = document.getElementById("btn-download");
+        dlBtn.classList.remove("hidden");
+        dlBtn.onclick = () => { window.location.href = `/download/${state.currentJobId}/${encodeURIComponent(j.output_file)}`; };
+        toast("✅ Render selesai! Silakan download.", "ok");
+        clearInterval(state.pollTimer);
+      } else if (j.status === "error") {
+        status.innerHTML = `<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-rose-400"></span><b class="text-rose-300">Gagal:</b> <span class="text-sm">${j.error || ""}</span></div>`;
+        document.getElementById("btn-render").disabled = false;
+        document.getElementById("btn-render").innerHTML = "🔄 Coba Lagi";
+        toast("❌ Render gagal. Periksa log.", "err");
+        clearInterval(state.pollTimer);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // ===== Modal =====
+  function showHelp() { document.getElementById("help-modal").classList.remove("hidden"); }
+  function closeHelp() { document.getElementById("help-modal").classList.add("hidden"); }
+
+  // ===== Keyboard =====
+  document.addEventListener("keydown", e => {
+    if (e.ctrlKey && e.key === "Enter") {
+      if (state.step === 4) startRender();
+    }
+    if (e.key === "Escape") closeHelp();
+  });
+
+  // ===== Init =====
+  addScene({ start: 0, end: 10, narration: "Selamat datang di video saya!" });
+  renderScenes();
+</script>
+</body>
+</html>
